@@ -24,10 +24,22 @@
 This example runs tests on the CTR implementation to verify correct behaviour.
 */
 
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <WiFiClient.h>
+#include <FS.h>
+
 #include <Crypto.h>
 #include <AES.h>
 #include <CTR.h>
 #include <string.h>
+
+const char* ssid = "FRITZ!Box 7590 UT";
+const char* password = "58349507793532778297";
+
+ESP8266WebServer server(80);
+void handleRoot();
+void handleGetData();
 
 #define MAX_PLAINTEXT_SIZE  36
 #define MAX_CIPHERTEXT_SIZE 36
@@ -164,20 +176,27 @@ void perfCipherEncrypt(const char *name, Cipher *cipher, const struct TestVector
     unsigned long elapsed;
     int count;
 
+    File file = SPIFFS.open("/data.txt", "a");
+    if (!file) {
+      Serial.println("Failed to open /data.txt for writing");
+    }
+
     Serial.print(name);
     Serial.print(" ... ");
 
+    file.print(name);
+    file.print(" ");
+
     cipher->setKey(test->key, cipher->keySize());
     cipher->setIV(test->iv, cipher->ivSize());
-    start = micros();
-    for (count = 0; count < 500; ++count) {
+    for (count = 0; count < 100; ++count) {
+        start = micros();
         cipher->encrypt(buffer, buffer, sizeof(buffer));
+      elapsed = micros() - start;
+      file.print(elapsed);
+      file.print("e ");
     }
-    elapsed = micros() - start;
-    Serial.print("Average Encryption Time: ");
-    Serial.print(elapsed / 500);
-    Serial.println(" microseconds");
-    Serial.println();
+    file.close();
 }
 
 void perfCipherDecrypt(const char *name, Cipher *cipher, const struct TestVector *test)
@@ -186,20 +205,27 @@ void perfCipherDecrypt(const char *name, Cipher *cipher, const struct TestVector
     unsigned long elapsed;
     int count;
 
+    File file = SPIFFS.open("/data.txt", "a");
+    if (!file) {
+      Serial.println("Failed to open /data.txt for writing");
+    }
+
     Serial.print(name);
     Serial.print(" ... ");
 
+    file.print(name);
+    file.print(" ");
+
     cipher->setKey(test->key, cipher->keySize());
     cipher->setIV(test->iv, cipher->ivSize());
-    start = micros();
-    for (count = 0; count < 500; ++count) {
+    for (count = 0; count < 100; ++count) {
+        start = micros();
         cipher->decrypt(buffer, buffer, sizeof(buffer));
+        elapsed = micros() - start;
+        file.print(elapsed);
+        file.print("d ");
     }
-    elapsed = micros() - start;
-    Serial.print("Average Decryption Time: ");
-    Serial.print(elapsed / 500);
-    Serial.println(" microseconds");
-    Serial.println();
+    file.close();
 }
 
 void setup()
@@ -207,6 +233,25 @@ void setup()
     Serial.begin(115200);
     delay(10000);
     Serial.println();
+
+    Serial.println();
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(1000);
+      Serial.println("Connecting to WiFi...");
+    }
+  
+    Serial.println("Connected to WiFi");
+    Serial.print("ESP8266 IP Address: ");
+    Serial.println(WiFi.localIP());
+
+    SPIFFS.begin();
+    File file = SPIFFS.open("/data.txt", "w");
+    if (!file) {
+      Serial.println("Failed to open /data.txt for writing");
+    }
+    file.print("");
+    file.close();
 
     Serial.println("Test Vectors:");
     testCipher(&ctraes128, &testVectorAES128CTR);
@@ -216,14 +261,38 @@ void setup()
     Serial.println();
 
     Serial.println("Performance Tests:");
-    perfCipherEncrypt("AES-128-CTR Encrypt", &ctraes128, &testVectorAES128CTR);
-    perfCipherDecrypt("AES-128-CTR Decrypt", &ctraes128, &testVectorAES128CTR);
-    perfCipherEncrypt("AES-192-CTR Encrypt", &ctraes128, &testVectorAES192CTR);
-    perfCipherDecrypt("AES-192-CTR Decrypt", &ctraes128, &testVectorAES192CTR);
-    perfCipherEncrypt("AES-256-CTR Encrypt", &ctraes128, &testVectorAES256CTR);
-    perfCipherDecrypt("AES-256-CTR Decrypt", &ctraes128, &testVectorAES256CTR);
+    perfCipherEncrypt("AES-128-CTR", &ctraes128, &testVectorAES128CTR);
+    perfCipherDecrypt("AES-128-CTR", &ctraes128, &testVectorAES128CTR);
+    perfCipherEncrypt("AES-192-CTR", &ctraes128, &testVectorAES192CTR);
+    perfCipherDecrypt("AES-192-CTR", &ctraes128, &testVectorAES192CTR);
+    perfCipherEncrypt("AES-256-CTR", &ctraes128, &testVectorAES256CTR);
+    perfCipherDecrypt("AES-256-CTR", &ctraes128, &testVectorAES256CTR);
+
+    server.on("/", HTTP_GET, handleRoot);
+    server.on("/getdata", HTTP_GET, handleGetData);
+    server.begin();
+    Serial.println("HTTP server started");
 }
 
-void loop()
-{
+void loop() {
+  server.handleClient();
+}
+
+void handleGetData() {
+  File file = SPIFFS.open("/data.txt", "r");
+  if (!file) {
+    server.send(500, "text/plain", "500: Internal Server Error");
+    return;
+  }
+
+  String fileContent = "";
+  while (file.available()) {
+    fileContent += (char)file.read();
+  }
+  file.close();
+  server.send(200, "text/plain", fileContent);
+}
+
+void handleRoot() {
+  server.send(200, "text/html", "<h1>ESP8266 NodeMCU V2>");
 }

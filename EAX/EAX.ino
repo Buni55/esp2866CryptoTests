@@ -25,11 +25,8 @@ This example runs tests on the EAX implementation to verify correct behaviour.
 */
 
 #include <Crypto.h>
-#include <CryptoLW.h>
 #include <EAX.h>
 #include <AES.h>
-#include <Speck.h>
-#include <SpeckTiny.h>
 #include <string.h>
 #if defined(ESP8266) || defined(ESP32)
 #include <pgmspace.h>
@@ -42,12 +39,13 @@ This example runs tests on the EAX implementation to verify correct behaviour.
 struct TestVector
 {
     const char *name;
-    uint8_t key[16];
+    uint8_t key[32];
     uint8_t plaintext[MAX_PLAINTEXT_LEN];
     uint8_t ciphertext[MAX_PLAINTEXT_LEN];
     uint8_t authdata[20];
     uint8_t iv[16];
     uint8_t tag[16];
+    size_t keysize;
     size_t authsize;
     size_t datasize;
     size_t tagsize;
@@ -67,6 +65,7 @@ static TestVector const testVectorEAX1 PROGMEM = {
                     0xFC, 0xB2, 0xA8, 0xC4, 0x90, 0x31, 0xA8, 0xB3},
     .tag         = {0xE0, 0x37, 0x83, 0x0E, 0x83, 0x89, 0xF2, 0x7B,
                     0x02, 0x5A, 0x2D, 0x65, 0x27, 0xE7, 0x9D, 0x01},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 0,
     .tagsize     = 16,
@@ -83,6 +82,7 @@ static TestVector const testVectorEAX2 PROGMEM = {
                     0x31, 0x94, 0xBA, 0x97, 0x2C, 0x66, 0xDE, 0xBD},
     .tag         = {0x5C, 0x4C, 0x93, 0x31, 0x04, 0x9D, 0x0B, 0xDA,
                     0xB0, 0x27, 0x74, 0x08, 0xF6, 0x79, 0x67, 0xE5},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 2,
     .tagsize     = 16,
@@ -99,6 +99,7 @@ static TestVector const testVectorEAX3 PROGMEM = {
                     0x00, 0xA1, 0x0E, 0xD0, 0x5D, 0x2B, 0xFF, 0x5E},
     .tag         = {0x3A, 0x59, 0xF2, 0x38, 0xA2, 0x3E, 0x39, 0x19,
                     0x9D, 0xC9, 0x26, 0x66, 0x26, 0xC4, 0x0F, 0x80},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 5,
     .tagsize     = 16,
@@ -115,6 +116,7 @@ static TestVector const testVectorEAX4 PROGMEM = {
                     0x92, 0xDC, 0x19, 0x9E, 0x46, 0xB7, 0xD6, 0x17},
     .tag         = {0xD4, 0xC1, 0x68, 0xA4, 0x22, 0x5D, 0x8E, 0x1F,
                     0xF7, 0x55, 0x93, 0x99, 0x74, 0xA7, 0xBE, 0xDE},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 5,
     .tagsize     = 16,
@@ -131,6 +133,7 @@ static TestVector const testVectorEAX5 PROGMEM = {
                     0x61, 0xD7, 0x42, 0x76, 0xE1, 0xF8, 0xE8, 0x16},
     .tag         = {0xCB, 0x06, 0x77, 0xE5, 0x36, 0xF7, 0x3A, 0xFE,
                     0x6A, 0x14, 0xB7, 0x4E, 0xE4, 0x98, 0x44, 0xDD},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 6,
     .tagsize     = 16,
@@ -149,6 +152,7 @@ static TestVector const testVectorEAX6 PROGMEM = {
                     0x13, 0xF7, 0x50, 0x93, 0x5E, 0x46, 0xDA, 0x1B},
     .tag         = {0xAB, 0xB8, 0x64, 0x4F, 0xD6, 0xCC, 0xB8, 0x69,
                     0x47, 0xC5, 0xE1, 0x05, 0x90, 0x21, 0x0A, 0x4F},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 12,
     .tagsize     = 16,
@@ -169,6 +173,7 @@ static TestVector const testVectorEAX7 PROGMEM = {
                     0x3B, 0x2B, 0xF1, 0x56, 0x9D, 0xEE, 0xFC, 0x19},
     .tag         = {0x13, 0x73, 0x27, 0xD1, 0x06, 0x49, 0xB0, 0xAA,
                     0x6E, 0x1C, 0x18, 0x1D, 0xB6, 0x17, 0xD7, 0xF2},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 17,
     .tagsize     = 16,
@@ -189,6 +194,7 @@ static TestVector const testVectorEAX8 PROGMEM = {
                     0x4D, 0x9A, 0xFF, 0x2B, 0xC7, 0x55, 0x98, 0x26},
     .tag         = {0x3B, 0x60, 0x45, 0x05, 0x99, 0xBD, 0x02, 0xC9,
                     0x63, 0x82, 0x90, 0x2A, 0xEF, 0x7F, 0x83, 0x2A},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 18,
     .tagsize     = 16,
@@ -209,6 +215,7 @@ static TestVector const testVectorEAX9 PROGMEM = {
                     0xDE, 0x97, 0xA9, 0xCA, 0x48, 0xE5, 0x22, 0xEC},
     .tag         = {0xE7, 0xF6, 0xD2, 0x23, 0x16, 0x18, 0x10, 0x2F,
                     0xDB, 0x7F, 0xE5, 0x5F, 0xF1, 0x99, 0x17, 0x00},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 18,
     .tagsize     = 16,
@@ -229,18 +236,53 @@ static TestVector const testVectorEAX10 PROGMEM = {
                     0xC5, 0x7E, 0xC0, 0xB3, 0xC1, 0x7D, 0x6B, 0x44},
     .tag         = {0xCF, 0xC4, 0x6A, 0xFC, 0x25, 0x3B, 0x46, 0x52,
                     0xB1, 0xAF, 0x37, 0x95, 0xB1, 0x24, 0xAB, 0x6E},
+    .keysize     = 16,
     .authsize    = 8,
     .datasize    = 21,
     .tagsize     = 16,
     .ivsize      = 16
 };
 
+static TestVector const testVectorEAX11 PROGMEM = {
+    .name        = "EAX #11 192-bit",
+    .key         = {0x83, 0xEC, 0xB7, 0xD1, 0xB9, 0xEA, 0xBD, 0x00, 0xAF, 0xAC, 0x06, 0x81, 0x71, 0xEE, 0x29, 0x57, 0x18, 0x47, 0x98, 0x38, 0x2B, 0x02, 0x40, 0x6B},
+    .plaintext   = {0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x57, 0x6F, 0x72, 0x6C, 0x64},
+    .ciphertext  = {0xDD, 0x9D, 0x22, 0x15, 0x4B, 0xDF, 0x63, 0x87, 0x4C, 0xF3, 0xCD, 0x58, 0x06, 0x6E, 0xD7, 0x8B},
+    .authdata    = {0x23, 0x4A, 0x34, 0x63, 0xC1, 0x26, 0x4A, 0xC6},
+    .iv          = {0xFF, 0xEB, 0xA4, 0x85, 0x17, 0xC2, 0xC1, 0x6C, 0x9E, 0x8F, 0x6E, 0x05, 0xD6, 0x8F, 0xC3, 0xD7},
+    .tag         = {0x03, 0x81, 0x20, 0x07, 0x33, 0xDF, 0x8B, 0x33, 0xF8, 0x1B, 0x57, 0x59, 0xF5, 0xC4, 0x52, 0x40},
+    .keysize     = 24,
+    .authsize    = 8,
+    .datasize    = 5,
+    .tagsize     = 16,
+    .ivsize      = 16
+};
+
+static TestVector const testVectorEAX12 PROGMEM = {
+    .name        = "EAX #11 256-bit",
+    .key         = {0x01, 0xF7, 0x4A, 0xD6, 0x40, 0x77, 0xF2, 0xE7,
+                    0x04, 0xC0, 0xF6, 0x0A, 0xDA, 0x3D, 0xD5, 0x23,
+                    0x70, 0xC3, 0xDB, 0x4F, 0x0D, 0x26, 0x36, 0x84,
+                    0x3A, 0x59, 0xF2, 0x38, 0xA2, 0x3E, 0x39, 0x19},
+    .plaintext   = {0x1A, 0x47, 0xCB, 0x49, 0x33},
+    .ciphertext  = {0xD8, 0x51, 0xD5, 0xBA, 0xE0},
+    .authdata    = {0x23, 0x4A, 0x34, 0x63, 0xC1, 0x26, 0x4A, 0xC6},
+    .iv          = {0x70, 0xC3, 0xDB, 0x4F, 0x0D, 0x26, 0x36, 0x84,
+                    0x00, 0xA1, 0x0E, 0xD0, 0x5D, 0x2B, 0xFF, 0x5E},
+    .tag         = {0x3A, 0x59, 0xF2, 0x38, 0xA2, 0x3E, 0x39, 0x19,
+                    0x9D, 0xC9, 0x26, 0x66, 0x26, 0xC4, 0x0F, 0x80},
+    .keysize     = 32,
+    .authsize    = 8,
+    .datasize    = 5,
+    .tagsize     = 16,
+    .ivsize      = 16
+};
+
 TestVector testVector;
 
-EAX<AES128> *eax;
+EAX<AES128> *eax128;
+EAX<AES192> *eax192;
 EAX<AES256> *eax256;
-EAX<Speck> *eaxSpeck;
-EAX<SpeckTiny> *eaxSpeckTiny;
 
 byte buffer[128];
 
@@ -249,10 +291,10 @@ bool testCipher_N(AuthenticatedCipher *cipher, const struct TestVector *test, si
     size_t posn, len;
     uint8_t tag[16];
 
-    crypto_feed_watchdog();
+    //crypto_feed_watchdog();
 
     cipher->clear();
-    if (!cipher->setKey(test->key, 16)) {
+    if (!cipher->setKey(test->key, test->keysize)) {
         Serial.print("setKey ");
         return false;
     }
@@ -351,7 +393,7 @@ void perfCipherSetKey(AuthenticatedCipher *cipher, const struct TestVector *test
     unsigned long elapsed;
     int count;
 
-    crypto_feed_watchdog();
+    //crypto_feed_watchdog();
 
     memcpy_P(&testVector, test, sizeof(TestVector));
     test = &testVector;
@@ -380,7 +422,7 @@ void perfCipherEncrypt(AuthenticatedCipher *cipher, const struct TestVector *tes
     unsigned long elapsed;
     int count;
 
-    crypto_feed_watchdog();
+    //crypto_feed_watchdog();
 
     memcpy_P(&testVector, test, sizeof(TestVector));
     test = &testVector;
@@ -410,7 +452,7 @@ void perfCipherDecrypt(AuthenticatedCipher *cipher, const struct TestVector *tes
     unsigned long elapsed;
     int count;
 
-    crypto_feed_watchdog();
+    //crypto_feed_watchdog();
 
     memcpy_P(&testVector, test, sizeof(TestVector));
     test = &testVector;
@@ -440,7 +482,7 @@ void perfCipherAddAuthData(AuthenticatedCipher *cipher, const struct TestVector 
     unsigned long elapsed;
     int count;
 
-    crypto_feed_watchdog();
+    //crypto_feed_watchdog();
 
     memcpy_P(&testVector, test, sizeof(TestVector));
     test = &testVector;
@@ -471,7 +513,7 @@ void perfCipherComputeTag(AuthenticatedCipher *cipher, const struct TestVector *
     unsigned long elapsed;
     int count;
 
-    crypto_feed_watchdog();
+    //crypto_feed_watchdog();
 
     memcpy_P(&testVector, test, sizeof(TestVector));
     test = &testVector;
@@ -506,51 +548,53 @@ void perfCipher(AuthenticatedCipher *cipher, const struct TestVector *test, cons
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
+    delay(7000);
 
     Serial.println();
 
     Serial.println("State Sizes:");
     Serial.print("EAX<AES128> ... ");
-    Serial.println(sizeof(*eax));
+    Serial.println(sizeof(*eax128));
+    Serial.print("EAX<AES192> ... ");
+    Serial.println(sizeof(*eax192));
     Serial.print("EAX<AES256> ... ");
     Serial.println(sizeof(*eax256));
-    Serial.print("EAX<Speck> ... ");
-    Serial.println(sizeof(*eaxSpeck));
-    Serial.print("EAX<SpeckTiny> ... ");
-    Serial.println(sizeof(*eaxSpeckTiny));
     Serial.println();
 
     Serial.println("Test Vectors:");
-    eax = new EAX<AES128>();
-    testCipher(eax, &testVectorEAX1);
-    testCipher(eax, &testVectorEAX2);
-    testCipher(eax, &testVectorEAX3);
-    testCipher(eax, &testVectorEAX4);
-    testCipher(eax, &testVectorEAX5);
-    testCipher(eax, &testVectorEAX6);
-    testCipher(eax, &testVectorEAX7);
-    testCipher(eax, &testVectorEAX8);
-    testCipher(eax, &testVectorEAX9);
-    testCipher(eax, &testVectorEAX10);
-
+    eax128 = new EAX<AES128>();
+    testCipher(eax128, &testVectorEAX1);
+    testCipher(eax128, &testVectorEAX2);
+    testCipher(eax128, &testVectorEAX3);
+    testCipher(eax128, &testVectorEAX4);
+    testCipher(eax128, &testVectorEAX5);
+    testCipher(eax128, &testVectorEAX6);
+    testCipher(eax128, &testVectorEAX7);
+    testCipher(eax128, &testVectorEAX8);
+    testCipher(eax128, &testVectorEAX9);
+    testCipher(eax128, &testVectorEAX10);
+    eax192 = new EAX<AES192>();
+    testCipher(eax192, &testVectorEAX11);
+    delete eax192;
+    eax256 = new EAX<AES256>();
+    testCipher(eax256, &testVectorEAX12);
+    delete eax256;
+    
     Serial.println();
 
     Serial.println("Performance Tests:");
-    perfCipher(eax, &testVectorEAX1, "AES-128");
+    perfCipher(eax128, &testVectorEAX1, "AES-128");
     Serial.println();
-    delete eax;
+    delete eax128;
+    eax192 = new EAX<AES192>();
+    perfCipher(eax192, &testVectorEAX1, "AES-192");
+    Serial.println();
+    delete eax192;
     eax256 = new EAX<AES256>();
     perfCipher(eax256, &testVectorEAX1, "AES-256");
     Serial.println();
     delete eax256;
-    eaxSpeck = new EAX<Speck>();
-    perfCipher(eaxSpeck, &testVectorEAX1, "Speck");
-    Serial.println();
-    delete eaxSpeck;
-    eaxSpeckTiny = new EAX<SpeckTiny>();
-    perfCipher(eaxSpeckTiny, &testVectorEAX1, "SpeckTiny");
-    delete eaxSpeckTiny;
 }
 
 void loop()

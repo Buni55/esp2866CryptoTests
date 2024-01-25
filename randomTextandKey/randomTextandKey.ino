@@ -75,7 +75,7 @@ AES256 aes256;
 byte buffer[16];
 byte key[32];
 
-void testRandomTextAndKeyCipher(BlockCipher *cipher, int keySize, const char *name) {
+void perfRandomTextAndKeyCipher(BlockCipher *cipher, int keySize, const char *name) {
     unsigned long totalEncryptTime = 0;
     unsigned long totalDecryptTime = 0;
     int numIterations = 100;
@@ -214,9 +214,9 @@ void setup()
     Serial.println();
     Serial.println("Random plaintext and key");
 
-    testRandomTextAndKeyCipher(&aes128, 16, "AES-128-Random");
-    testRandomTextAndKeyCipher(&aes192, 24, "AES-192-Random");
-    testRandomTextAndKeyCipher(&aes256, 32, "AES-256-Random");
+    perfRandomTextAndKeyCipher(&aes128, 16, "AES-128-Random");
+    perfRandomTextAndKeyCipher(&aes192, 24, "AES-192-Random");
+    perfRandomTextAndKeyCipher(&aes256, 32, "AES-256-Random");
 }
 
 void loop()
