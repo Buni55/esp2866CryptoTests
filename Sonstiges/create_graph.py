@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data = pd.read_csv("gcm.csv")
+data = pd.read_csv("output.csv")
 
 transposed_data = data.set_index('Method').T
 

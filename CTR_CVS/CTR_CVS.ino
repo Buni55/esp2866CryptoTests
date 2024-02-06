@@ -213,7 +213,6 @@ void perfCipherDecrypt(const char *name, Cipher *cipher, const struct TestVector
     Serial.print(name);
     Serial.print(" ... ");
 
-    file.print(name);
     file.print(" ");
 
     cipher->setKey(test->key, cipher->keySize());

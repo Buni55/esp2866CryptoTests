@@ -27,6 +27,9 @@ This example runs tests on the AES implementation to verify correct behaviour.
 #include <Crypto.h>
 #include <AES.h>
 #include <string.h>
+#include <EmonLib.h>
+
+EnergyMonitor emon1;
 
 struct TestVector
 {
@@ -74,8 +77,60 @@ AES256 aes256;
 
 byte buffer[16];
 
-void testCipher(BlockCipher *cipher, const struct TestVector *test)
-{
+void perfRandomTextCipher(BlockCipher *cipher, const char *name) {
+    unsigned long totalEncryptTime = 0;
+    unsigned long totalDecryptTime = 0;
+    int numIterations = 100;
+
+    double IrmsStart = emon1.calcIrms(1480);
+    double powerStart = IrmsStart * 2.8;
+    Serial.println(name);
+    Serial.print("irmsStart: ");
+    Serial.println(IrmsStart);
+    Serial.print("powerStart: ");
+    Serial.println(powerStart);
+    for (int i = 0; i < numIterations; ++i)
+    {
+        for (int j = 0; j < 16; ++j)
+        {
+            buffer[j] = random(256);
+        }       
+        
+        unsigned long startEncrypt = micros();
+        cipher->encryptBlock(buffer, buffer);
+        unsigned long elapsedEncrypt = micros() - startEncrypt;
+        totalEncryptTime += elapsedEncrypt;
+     
+        unsigned long startDecrypt = micros();
+        cipher->decryptBlock(buffer, buffer);
+        unsigned long elapsedDecrypt = micros() - startDecrypt;
+        totalDecryptTime += elapsedDecrypt;
+
+    }
+
+        double IrmsEnd = emon1.calcIrms(1480);
+        double powerEnd = IrmsEnd * 2.8;
+      	double powerUsed = powerEnd - powerStart;
+        Serial.print("Power Used for this iteration: ");
+        Serial.println(powerUsed);
+        Serial.print("irmsEnd: ");
+        Serial.println(IrmsEnd);
+        Serial.print("powerEnd: ");
+        Serial.println(powerEnd);
+
+    Serial.print("Average Encryption Time: ");
+    Serial.print(totalEncryptTime / numIterations);
+    Serial.println(" microseconds");
+
+
+    Serial.print("Average Decryption Time: ");
+    Serial.print(totalDecryptTime / numIterations);
+    Serial.println(" microseconds");
+    Serial.println();
+}
+
+
+void testCipher(BlockCipher *cipher, const struct TestVector *test) {
     //crypto_feed_watchdog();
     Serial.print(test->name);
     Serial.print(" Encryption ... ");
@@ -95,8 +150,7 @@ void testCipher(BlockCipher *cipher, const struct TestVector *test)
         Serial.println("Failed");
 }
 
-void perfCipher(BlockCipher *cipher, const struct TestVector *test)
-{
+void perfCipher(BlockCipher *cipher, const struct TestVector *test) {
     unsigned long start;
     unsigned long elapsed;
     int count;
@@ -142,9 +196,10 @@ void perfCipher(BlockCipher *cipher, const struct TestVector *test)
     Serial.println();
 }
 
-void setup()
-{
-    Serial.begin(9600);
+void setup() {
+    Serial.begin(4800);
+    delay(6000);
+    emon1.current(1, 111.1);
 
     Serial.println();
 
@@ -165,9 +220,16 @@ void setup()
     Serial.println();
 
     Serial.println("Performance Tests:");
-    perfCipher(&aes128, &testVectorAES128);
-    perfCipher(&aes192, &testVectorAES192);
-    perfCipher(&aes256, &testVectorAES256);
+    //perfCipher(&aes128, &testVectorAES128);
+    //perfCipher(&aes192, &testVectorAES192);
+    //perfCipher(&aes256, &testVectorAES256);
+
+    Serial.println();
+    Serial.println("Random plaintext");
+
+    perfRandomTextCipher(&aes128, "AES-128-Random");
+    perfRandomTextCipher(&aes192, "AES-192-Random");
+    perfRandomTextCipher(&aes256, "AES-256-Random");
 }
 
 void loop()

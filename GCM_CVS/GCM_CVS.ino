@@ -48,8 +48,8 @@ This example runs tests on the GCM implementation to verify correct behaviour.
 
 #define MAX_PLAINTEXT_LEN 64
 
-const char* ssid = "FRITZ!Box 7590 UT";
-const char* password = "58349507793532778297";
+const char* ssid = "wlan name";
+const char* password = "password";
 
 ESP8266WebServer server(80);
 void handleRoot();
@@ -461,7 +461,6 @@ void perfCipherDecrypt(AuthenticatedCipher *cipher, const struct TestVector *tes
 
     Serial.print(name);
     Serial.print(" Decrypt ... ");
-    file.print(name);
     file.print(" ");
 
     cipher->setKey(test->key, cipher->keySize());

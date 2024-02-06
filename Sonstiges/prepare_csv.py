@@ -1,6 +1,4 @@
 import requests
-import regex as re
-import os
 
 url = "http://192.168.178.180/getdata"
 
