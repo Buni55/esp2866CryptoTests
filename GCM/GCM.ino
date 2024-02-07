@@ -519,6 +519,9 @@ void setup()
     Serial.begin(115200);
     delay(7000);
     Serial.println();
+    pinMode(LED_BUILTIN, OUTPUT);
+
+
 
 #ifndef TEST_SPECK
     Serial.println("State Sizes:");
@@ -551,6 +554,7 @@ void setup()
 
     Serial.println("Performance Tests:");
 #ifndef TEST_SPECK
+    digitalWrite(LED_BUILTIN, HIGH);
     gcmaes128 = new GCM<AES128>();
     perfCipher(gcmaes128, &testVectorGCM1, testVectorGCM1.name);
     delete gcmaes128;
@@ -560,9 +564,12 @@ void setup()
     gcmaes256 = new GCM<AES256>();
     perfCipher(gcmaes256, &testVectorGCM16, testVectorGCM16.name);
     delete gcmaes256;
+    digitalWrite(LED_BUILTIN, LOW);
+
 #endif
 }
 
 void loop()
 {
+  delay(1000);
 }

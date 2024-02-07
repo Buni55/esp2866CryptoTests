@@ -176,7 +176,7 @@ void perfCipher(BlockCipher *cipher, const struct TestVector *test) {
 }
 
 void setup() {
-    Serial.begin(4800);
+    Serial.begin(600);
     delay(6000);
 
     Serial.println();

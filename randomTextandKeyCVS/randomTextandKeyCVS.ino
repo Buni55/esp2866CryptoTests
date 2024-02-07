@@ -8,8 +8,8 @@
 #include <string.h>
 
 
-const char* ssid = "FRITZ!Box 7590 UT";
-const char* password = "58349507793532778297";
+const char* ssid = "name";
+const char* password = "password";
 
 ESP8266WebServer server(80);
 void handleRoot();

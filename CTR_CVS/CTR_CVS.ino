@@ -34,8 +34,8 @@ This example runs tests on the CTR implementation to verify correct behaviour.
 #include <CTR.h>
 #include <string.h>
 
-const char* ssid = "FRITZ!Box 7590 UT";
-const char* password = "58349507793532778297";
+const char* ssid = "name";
+const char* password = "password";
 
 ESP8266WebServer server(80);
 void handleRoot();
@@ -232,6 +232,7 @@ void setup()
     Serial.begin(115200);
     delay(10000);
     Serial.println();
+    pinMode(LED_BUILTIN, OUTPUT);
 
     Serial.println();
     WiFi.begin(ssid, password);
@@ -259,6 +260,7 @@ void setup()
 
     Serial.println();
 
+    digitalWrite(LED_BUILTIN, HIGH);
     Serial.println("Performance Tests:");
     perfCipherEncrypt("AES-128-CTR", &ctraes128, &testVectorAES128CTR);
     perfCipherDecrypt("AES-128-CTR", &ctraes128, &testVectorAES128CTR);
@@ -266,6 +268,7 @@ void setup()
     perfCipherDecrypt("AES-192-CTR", &ctraes128, &testVectorAES192CTR);
     perfCipherEncrypt("AES-256-CTR", &ctraes128, &testVectorAES256CTR);
     perfCipherDecrypt("AES-256-CTR", &ctraes128, &testVectorAES256CTR);
+    digitalWrite(LED_BUILTIN, LOW);
 
     server.on("/", HTTP_GET, handleRoot);
     server.on("/getdata", HTTP_GET, handleGetData);

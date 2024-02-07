@@ -48,7 +48,7 @@ This example runs tests on the GCM implementation to verify correct behaviour.
 
 #define MAX_PLAINTEXT_LEN 64
 
-const char* ssid = "wlan name";
+const char* ssid = "name";
 const char* password = "password";
 
 ESP8266WebServer server(80);
